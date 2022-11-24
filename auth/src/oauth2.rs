@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
 use super::{Error, ErrorKind, Result};
-use chrono::Utc;
+// use chrono::Utc;
 use serde::Serialize;
 
 /// JSON Web Signature for a token.
@@ -33,11 +35,27 @@ pub struct JwsClaims<'a> {
 
 impl JwsClaims<'_> {
     pub fn encode(&mut self) -> Result<String> {
-        let now = Utc::now() - chrono::Duration::seconds(10);
-        self.iat = self.iat.or_else(|| Some(now.timestamp()));
-        self.exp = self
-            .iat
-            .or_else(|| Some((now + chrono::Duration::hours(1)).timestamp()));
+        // let now = Utc::now() - chrono::Duration::seconds(10);
+        let now = SystemTime::now() - Duration::new(10, 0);
+        self.iat = self.iat.or_else(|| {
+            Some(
+                now.duration_since(UNIX_EPOCH)
+                    .expect("Clock may have gone backwards")
+                    .as_secs()
+                    .try_into()
+                    .expect("SystemTime before UNIX EPOCH"),
+            )
+        });
+        self.exp = self.iat.or_else(|| {
+            Some(
+                (now + Duration::new(60 * 60, 0))
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Clock may have gone backwards")
+                    .as_secs()
+                    .try_into()
+                    .expect("SystemTime before UNIX EPOCH"),
+            )
+        });
         if self.exp.unwrap() < self.iat.unwrap() {
             return Err(Error::new(
                 "exp must be later than iat",

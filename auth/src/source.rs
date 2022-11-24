@@ -18,13 +18,14 @@ use super::metadata;
 use crate::oauth2::{JwsClaims, JwsHeader};
 use crate::{AccessToken, Error, ErrorKind, Result};
 use async_trait::async_trait;
-use chrono::{Duration, Utc};
+// use chrono::{Duration, Utc};
 use rustls::sign::Signer;
 use rustls::sign::SigningKey;
 use rustls_pemfile::Item;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Arc;
+use std::time::{Duration, Instant, SystemTime};
 use tokio::sync::Mutex;
 
 const DEFAULT_HEADER: JwsHeader = JwsHeader {
@@ -152,7 +153,8 @@ impl ServiceAccountKeySource {
 
         Ok(AccessToken {
             value: token_response.access_token,
-            expires: Some(Utc::now() + Duration::seconds(token_response.expires_in)),
+            // expires: Some(Utc::now() + Duration::seconds(token_response.expires_in)),
+            expires: Some(SystemTime::now() + Duration::new(token_response.expires_in as u64, 0)),
         })
     }
 
@@ -314,7 +316,7 @@ impl UserSource {
         let token_response: TokenResponse = res.json().await.map_err(Error::wrap_serialization)?;
         Ok(AccessToken {
             value: token_response.access_token,
-            expires: Some(Utc::now() + Duration::seconds(token_response.expires_in)),
+            expires: Some(SystemTime::now() + Duration::new(token_response.expires_in as u64, 0)),
         })
     }
 }
@@ -358,7 +360,7 @@ impl ComputeSource {
         let token = metadata::fetch_access_token(None, self.scopes.clone()).await?;
         Ok(AccessToken {
             value: token.access_token,
-            expires: Some(Utc::now() + Duration::seconds(token.expires_in)),
+            expires: Some(SystemTime::now() + Duration::new(token.expires_in as u64, 0)),
         })
     }
 }
@@ -421,7 +423,7 @@ impl Source for RefresherSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::DateTime;
+    // use chrono::DateTime;
 
     #[tokio::main]
     #[test]
@@ -446,7 +448,8 @@ mod tests {
 
     #[derive(Clone)]
     struct FakeSource {
-        static_time: DateTime<Utc>,
+        // static_time: DateTime<Utc>,
+        static_time: SystemTime,
         counter: Arc<Mutex<i64>>,
     }
 
@@ -472,7 +475,8 @@ mod tests {
                 expires: None,
             })),
             source: Box::new(FakeSource {
-                static_time: Utc::now() + chrono::Duration::seconds(20),
+                // static_time: Utc::now() + chrono::Duration::seconds(20),
+                static_time: SystemTime::now() + Duration::new(20, 0),
                 counter: Arc::new(Mutex::new(0)),
             }),
         };
@@ -491,7 +495,7 @@ mod tests {
                 expires: None,
             })),
             source: Box::new(FakeSource {
-                static_time: Utc::now() - chrono::Duration::seconds(20),
+                static_time: SystemTime::now() - Duration::new(20, 0),
                 counter: Arc::new(Mutex::new(0)),
             }),
         };
