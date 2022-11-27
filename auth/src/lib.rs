@@ -16,12 +16,11 @@
 //! from various environments. This process is of finding credentials from the
 //! environment is called [Application Default Credentials](https://google.aip.dev/auth/4110).
 
-use chrono::Utc;
-use chrono::{DateTime, Duration};
 use serde::Deserialize;
 use source::*;
 use std::error::Error as StdError;
 use std::path::PathBuf;
+use std::time::{Duration, SystemTime};
 
 mod metadata;
 mod oauth2;
@@ -147,7 +146,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub struct AccessToken {
     /// The actual token.
     pub value: String,
-    expires: Option<DateTime<Utc>>,
+    expires: Option<SystemTime>,
 }
 
 impl AccessToken {
@@ -155,9 +154,9 @@ impl AccessToken {
     /// clock skew with by ten seconds.
     pub(crate) fn is_validish(&self) -> bool {
         if let Some(expires) = self.expires {
-            let now = Utc::now();
+            let now = SystemTime::now();
             // Avoid clock skew with 10 second diff of now.
-            let expiresish = expires - Duration::seconds(10);
+            let expiresish = expires - Duration::from_secs(10);
             expiresish > now
         } else {
             false
