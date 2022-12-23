@@ -19,7 +19,7 @@
 use serde::Deserialize;
 use source::*;
 use std::error::Error as StdError;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 mod metadata;
@@ -233,6 +233,17 @@ impl Credential {
         self.source.token().await
     }
 
+    pub async fn find(file_path: impl AsRef<Path>, config: CredentialConfig) -> Result<Credential> {
+        let base_source = Credential::file_source(file_path, config).await?;
+        let refreshed_source = RefresherSource {
+            source: base_source,
+            ..Default::default()
+        };
+        Ok(Credential {
+            source: Box::new(refreshed_source),
+        })
+    }
+
     /// Creates a Credential that uses [Application Default Credentials](https://google.aip.dev/auth/4110)
     /// to figure out how a to produce a [AccessToken].
     pub async fn find_default(config: CredentialConfig) -> Result<Credential> {
@@ -252,7 +263,7 @@ impl Credential {
     ) -> Result<Box<dyn Source + Send + Sync + 'static>> {
         // 1: Known environment variable.
         if let Ok(file_name) = std::env::var(GOOGLE_APPLICATION_CREDENTIALS_ENV) {
-            let source = Credential::file_source(file_name.into(), config).await?;
+            let source = Credential::file_source(file_name, config).await?;
             return Ok(source);
         }
         // 2: Well-known file.
@@ -280,7 +291,7 @@ impl Credential {
     /// Creates a source from a file type credential such as a Service Account
     /// Key file or a gcloud user credential.
     async fn file_source(
-        file_path: PathBuf,
+        file_path: impl AsRef<Path>,
         config: CredentialConfig,
     ) -> Result<Box<dyn Source + Send + Sync + 'static>> {
         let contents = tokio::fs::read(file_path).await.map_err(Error::wrap_io)?;
