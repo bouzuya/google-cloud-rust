@@ -234,6 +234,17 @@ impl Credential {
         self.source.token().await
     }
 
+    pub async fn find(file_path: impl AsRef<Path>, config: CredentialConfig) -> Result<Credential> {
+        let base_source = Credential::file_source(file_path, config).await?;
+        let refreshed_source = RefresherSource {
+            source: base_source,
+            ..Default::default()
+        };
+        Ok(Credential {
+            source: Box::new(refreshed_source),
+        })
+    }
+
     /// Creates a Credential that uses [Application Default Credentials](https://google.aip.dev/auth/4110)
     /// to figure out how a to produce a [AccessToken].
     pub async fn find_default(config: CredentialConfig) -> Result<Credential> {
