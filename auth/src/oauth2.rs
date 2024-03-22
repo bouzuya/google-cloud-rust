@@ -15,6 +15,7 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use super::{Error, ErrorKind, Result};
+use base64::Engine as _;
 use serde::Serialize;
 
 fn timestamp(system_time: SystemTime) -> i64 {
@@ -55,7 +56,7 @@ impl JwsClaims<'_> {
             ));
         }
         let json = serde_json::to_string(&self).map_err(Error::wrap_serialization)?;
-        Ok(base64::encode_config(json, base64::URL_SAFE_NO_PAD))
+        Ok(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(json))
     }
 }
 
@@ -71,6 +72,6 @@ pub struct JwsHeader<'a> {
 impl JwsHeader<'_> {
     pub fn encode(&self) -> Result<String> {
         let json = serde_json::to_string(&self).map_err(Error::wrap_serialization)?;
-        Ok(base64::encode_config(json, base64::URL_SAFE_NO_PAD))
+        Ok(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(json))
     }
 }

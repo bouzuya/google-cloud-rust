@@ -18,6 +18,7 @@ use super::metadata;
 use crate::oauth2::{JwsClaims, JwsHeader};
 use crate::{AccessToken, Error, ErrorKind, Result};
 use async_trait::async_trait;
+use base64::Engine;
 use rustls::sign::Signer;
 use rustls::sign::SigningKey;
 use rustls_pemfile::Item;
@@ -206,7 +207,7 @@ impl ServiceAccountKeySource {
         Ok(format!(
             "{}.{}",
             ss,
-            base64::encode_config(sig, base64::URL_SAFE_NO_PAD)
+            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(sig)
         ))
     }
 }
