@@ -167,19 +167,19 @@ impl ServiceAccountKeySource {
                 Error::new("unable to parse service account key", ErrorKind::Validation)
             })?;
         let pk = match pk {
-            Item::RSAKey(item) => item,
-            Item::PKCS8Key(item) => item,
+            Item::Pkcs1Key(item) => item.into(),
+            Item::Pkcs8Key(item) => item.into(),
             other => {
                 return Err(Error::new(
                     format!(
-                        "expected key to be in form of RSA or PKCS8, found {:?}",
+                        "expected key to be in form of PKCS#1 or PKCS#8, found {:?}",
                         other
                     ),
                     ErrorKind::Validation,
                 ))
             }
         };
-        rustls::sign::RsaSigningKey::new(&rustls::PrivateKey(pk))
+        rustls::crypto::aws_lc_rs::sign::RsaSigningKey::new(&pk)
             .map_err(|e| Error::new_with_error("unable to create signer", e, ErrorKind::Other))?
             .choose_scheme(&[rustls::SignatureScheme::RSA_PKCS1_SHA256])
             .ok_or_else(|| Error::new("invalid signing scheme", ErrorKind::Validation))
